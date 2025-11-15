@@ -1,0 +1,142 @@
+// Data Nominasi Puskás 2025 (Contoh Realistis)
+const nominees = [
+  { id: 1, player: "Lionel Messi", team: "Inter Miami", goal: "Bicycle Kick vs NYCFC", type: "bicycle", votes: 284000, video: "1.jpg" },
+  { id: 2, player: "Kylian Mbappé", team: "Real Madrid", goal: "60m Solo Run vs Barcelona", type: "solo", votes: 312000, video: "2.jpg" },
+  { id: 3, player: "Erling Haaland", team: "Man City", goal: "Volley 40m vs United", type: "long", votes: 298000, video: "3.jpg" },
+  { id: 4, player: "Son Heung-min", team: "Tottenham", goal: "Rabona Chip vs Arsenal", type: "bicycle", votes: 265000, video: "4.jpg" },
+  { id: 5, player: "Vinícius Jr.", team: "Real Madrid", goal: "Elastico + Chip vs Liverpool", type: "solo", votes: 279000, video: "5.jpg" },
+  { id: 6, player: "Mohamed Salah", team: "Liverpool", goal: "Backheel Volley vs Everton", type: "bicycle", votes: 255000, video: "6.jpg" },
+  { id: 7, player: "Jamal Musiala", team: "Bayern", goal: "Roulette + Top Corner", type: "solo", votes: 241000, video: "7.jpg" },
+  { id: 8, player: "Alejandro Garnacho", team: "Man United", goal: "Overhead vs Everton", type: "bicycle", votes: 310000, video: "8.jpg" },
+  { id: 9, player: "Lamine Yamal", team: "Barcelona", goal: "Outside Foot Curl 35m", type: "long", votes: 268000, video: "9.jpg" },
+  { id: 10, player: "Cristiano Ronaldo", team: "Al Nassr", goal: "Header 2.8m vs Abha", type: "long", votes: 295000, video: "10.jpg" }
+];
+
+// Three.js Globe Background
+let scene, camera, renderer, globe;
+function initGlobe() {
+  const canvas = document.getElementById('globe-canvas');
+  scene = new THREE.Scene();
+  camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+  renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(window.devicePixelRatio);
+
+  const geometry = new THREE.SphereGeometry(5, 64, 64);
+  const texture = new THREE.TextureLoader().load('https://threejs.org/examples/textures/planets/earth_atmos_2048.jpg');
+  const material = new THREE.MeshPhongMaterial({ map: texture, shininess: 0.5 });
+  globe = new THREE.Mesh(geometry, material);
+  scene.add(globe);
+
+  const light = new THREE.DirectionalLight(0xffffff, 1);
+  light.position.set(5, 3, 5);
+  scene.add(light);
+  scene.add(new THREE.AmbientLight(0x404040));
+
+  camera.position.z = 15;
+
+  function animate() {
+    requestAnimationFrame(animate);
+    globe.rotation.y += 0.002;
+    renderer.render(scene, camera);
+  }
+  animate();
+
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+}
+
+// Render Nominees
+function renderNominees(filter = 'all') {
+  const grid = document.getElementById('nominees-grid');
+  const filtered = filter === 'all' ? nominees : nominees.filter(n => n.type === filter);
+  
+  grid.innerHTML = filtered.map(n => `
+    <div class="nominee-card group relative bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden hover:border-primary transition-all duration-500" data-type="${n.type}">
+      <div class="aspect-video relative overflow-hidden">
+        <img src="/assets/img/nominees/${n.video}" alt="${n.goal}" class="w-full h-full object-cover group-hover:scale-110 transition duration-700" loading="lazy" />
+        <div class="absolute inset-0 bg-gradient-to-t from-dark via-transparent to-transparent opacity-60"></div>
+        <div class="absolute top-4 right-4 bg-primary text-dark text-xs font-bold px-3 py-1 rounded-full">
+          #${n.id}
+        </div>
+        <button class="play-btn absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
+          <svg class="w-16 h-16 text-white drop-shadow-lg" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M8 5v14l11-7L8 5z"/>
+          </svg>
+        </button>
+      </div>
+      <div class="p-6">
+        <h3 class="text-xl font-bold mb-1">${n.player}</h3>
+        <p class="text-gray-400 text-sm mb-3">${n.team} • ${n.goal}</p>
+        <div class="flex items-center justify-between">
+          <div class="text-2xl font-black text-primary">${formatVotes(n.votes)}</div>
+          <div class="text-xs text-gray-500">votes</div>
+        </div>
+        <div class="mt-4 w-full bg-white/10 rounded-full h-2">
+          <div class="bg-gradient-to-r from-primary to-accent h-2 rounded-full transition-all duration-1000" style="width: ${getVotePercentage(n.votes)}%"></div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+
+  // GSAP Animations
+  gsap.from('.nominee-card', {
+    y: 60,
+    opacity: 0,
+    duration: 0.8,
+    stagger: 0.1,
+    ease: 'power3.out',
+    scrollTrigger: {
+      trigger: '#nominees-grid',
+      start: 'top 80%'
+    }
+  });
+}
+
+function formatVotes(num) {
+  if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+  if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+  return num;
+}
+
+function getVotePercentage(votes) {
+  const max = Math.max(...nominees.map(n => n.votes));
+  return (votes / max) * 100;
+}
+
+// Filter Buttons
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active', 'bg-primary/20', 'border-primary', 'text-primary'));
+    btn.classList.add('active', 'bg-primary/20', 'border-primary', 'text-primary');
+    renderNominees(btn.dataset.filter);
+  });
+});
+
+// Vote Form
+document.getElementById('vote-select').innerHTML = '<option value="">Pilih Gol</option>' + 
+  nominees.map(n => `<option value="${n.id}">#${n.id} - ${n.player} (${n.goal})</option>`).join('');
+
+document.getElementById('submit-vote').addEventListener('click', () => {
+  alert('Terima kasih! Vote kamu telah direkam. Hasil akhir: 20 Desember 2025.');
+});
+
+// Countdown
+function updateCountdown() {
+  const end = new Date('2025-12-20T23:59:59');
+  const now = new Date();
+  const diff = end - now;
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  document.getElementById('countdown').innerHTML = `Voting ditutup dalam <span class="text-primary font-bold">${days} hari</span>`;
+}
+setInterval(updateCountdown, 86400000);
+updateCountdown();
+
+// Init
+document.addEventListener('DOMContentLoaded', () => {
+  initGlobe();
+  renderNominees();
+});
